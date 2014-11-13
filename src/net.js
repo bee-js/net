@@ -56,51 +56,6 @@ define(['promise', 'querystring'], function(Promise, QueryString) {
     setter: QueryString.stringify
   });
 
-  function parseHeaders(data, object) {
-    var headers  = data.split(lineEndReg),
-        result   = {},
-        downcase = {},
-        list     = [],
-        l = headers.length - 1,
-        i = 0;
-
-    headers.pop();
-
-    while(i < l) {
-      var header = headers[i++],
-          parts  = header.split(':'),
-          key    = parts.shift(),
-          value  = parts.join(':').trim();
-
-      result[key] = value;
-      downcase[key.toLowerCase()] = value;
-      list.push(key);
-    }
-
-    object.headers    = result;
-    object._headers   = downcase;
-    object.headerKeys = list;
-
-    return object;
-  }
-
-  function parseResponseBody(body, contentType, object) {
-    var type    = contentTypes[contentType],
-        handler = contentTypeHandlers[type];
-
-    if (type && handler && handler.getter) {
-      try {
-        object[type] = object.body = handler.getter.call(body, body);
-      } catch(e) {
-        object.body = body;
-      }
-    } else {
-      object.body = body;
-    }
-
-    return object;
-  }
-
   /**
    * Response object
    */
@@ -145,6 +100,48 @@ define(['promise', 'querystring'], function(Promise, QueryString) {
       return this._headers[key.toLowerCase()];
     }
   };
+
+  function parseHeaders(data, object) {
+    var headers  = data.split(lineEndReg),
+        result   = {},
+        downcase = {},
+        l = headers.length - 1,
+        i = 0;
+
+    headers.pop();
+
+    while(i < l) {
+      var header = headers[i++],
+          parts  = header.split(':'),
+          key    = parts.shift(),
+          value  = parts.join(':').trim();
+
+      result[key] = value;
+      downcase[key.toLowerCase()] = value;
+    }
+
+    object.headers  = result;
+    object._headers = downcase;
+
+    return object;
+  }
+
+  function parseResponseBody(body, contentType, object) {
+    var type    = contentTypes[contentType],
+        handler = contentTypeHandlers[type];
+
+    if (type && handler && handler.getter) {
+      try {
+        object[type] = object.body = handler.getter.call(body, body);
+      } catch(e) {
+        object.body = body;
+      }
+    } else {
+      object.body = body;
+    }
+
+    return object;
+  }
 
   net.Response = Response;
 
