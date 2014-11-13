@@ -25,96 +25,94 @@ define(['bee/net'], function(net) {
     });
 
     describe('status', function() {
-      describe('type', function() {
-        it('info', function() {
-          xhr.respond(101);
-          response = new net.Response(xhr);
+      it('info', function() {
+        xhr.respond(101);
+        response = new net.Response(xhr);
 
-          expect(response.status).to.be.eql(101);
-          expect(response.statusText).to.be.eql('Switching Protocols');
+        expect(response.status).to.be.eql(101);
+        expect(response.statusText).to.be.eql('Switching Protocols');
 
-          expect(response.info).to.be.true;
-          expect(response.success).to.be.false;
-          expect(response.redirect).to.be.false;
-          expect(response.clientError).to.be.false;
-          expect(response.serverError).to.be.false;
+        expect(response.info).to.be.true;
+        expect(response.success).to.be.false;
+        expect(response.redirect).to.be.false;
+        expect(response.clientError).to.be.false;
+        expect(response.serverError).to.be.false;
 
-          expect(response.error).to.be.false;
+        expect(response.error).to.be.false;
 
-          expect(response.statusType).to.be.eql('info');
-        });
+        expect(response.statusType).to.be.eql('info');
+      });
 
-        it('success', function() {
-          xhr.respond(201);
-          response = new net.Response(xhr);
+      it('success', function() {
+        xhr.respond(201);
+        response = new net.Response(xhr);
 
-          expect(response.status).to.be.eql(201);
-          expect(response.statusText).to.be.eql('Created');
+        expect(response.status).to.be.eql(201);
+        expect(response.statusText).to.be.eql('Created');
 
-          expect(response.info).to.be.false;
-          expect(response.success).to.be.true;
-          expect(response.redirect).to.be.false;
-          expect(response.clientError).to.be.false;
-          expect(response.serverError).to.be.false;
+        expect(response.info).to.be.false;
+        expect(response.success).to.be.true;
+        expect(response.redirect).to.be.false;
+        expect(response.clientError).to.be.false;
+        expect(response.serverError).to.be.false;
 
-          expect(response.error).to.be.false;
+        expect(response.error).to.be.false;
 
-          expect(response.statusType).to.be.eql('success');
-        });
+        expect(response.statusType).to.be.eql('success');
+      });
 
-        it('redirect', function() {
-          xhr.respond(302);
-          response = new net.Response(xhr);
+      it('redirect', function() {
+        xhr.respond(302);
+        response = new net.Response(xhr);
 
-          expect(response.status).to.be.eql(302);
-          expect(response.statusText).to.be.eql('Found');
+        expect(response.status).to.be.eql(302);
+        expect(response.statusText).to.be.eql('Found');
 
-          expect(response.info).to.be.false;
-          expect(response.success).to.be.false;
-          expect(response.redirect).to.be.true;
-          expect(response.clientError).to.be.false;
-          expect(response.serverError).to.be.false;
+        expect(response.info).to.be.false;
+        expect(response.success).to.be.false;
+        expect(response.redirect).to.be.true;
+        expect(response.clientError).to.be.false;
+        expect(response.serverError).to.be.false;
 
-          expect(response.error).to.be.false;
+        expect(response.error).to.be.false;
 
-          expect(response.statusType).to.be.eql('redirect');
-        });
+        expect(response.statusType).to.be.eql('redirect');
+      });
 
-        it('clientError', function() {
-          xhr.respond(404);
-          response = new net.Response(xhr);
+      it('clientError', function() {
+        xhr.respond(404);
+        response = new net.Response(xhr);
 
-          expect(response.status).to.be.eql(404);
-          expect(response.statusText).to.be.eql('Not Found');
+        expect(response.status).to.be.eql(404);
+        expect(response.statusText).to.be.eql('Not Found');
 
-          expect(response.info).to.be.false;
-          expect(response.success).to.be.false;
-          expect(response.redirect).to.be.false;
-          expect(response.clientError).to.be.true;
-          expect(response.serverError).to.be.false;
+        expect(response.info).to.be.false;
+        expect(response.success).to.be.false;
+        expect(response.redirect).to.be.false;
+        expect(response.clientError).to.be.true;
+        expect(response.serverError).to.be.false;
 
-          expect(response.error).to.be.true;
+        expect(response.error).to.be.true;
 
-          expect(response.statusType).to.be.eql('clientError');
-        });
+        expect(response.statusType).to.be.eql('clientError');
+      });
 
-        it('clientError', function() {
-          xhr.respond(502);
-          response = new net.Response(xhr);
+      it('clientError', function() {
+        xhr.respond(502);
+        response = new net.Response(xhr);
 
-          expect(response.status).to.be.eql(502);
-          expect(response.statusText).to.be.eql('Bad Gateway');
+        expect(response.status).to.be.eql(502);
+        expect(response.statusText).to.be.eql('Bad Gateway');
 
-          expect(response.info).to.be.false;
-          expect(response.success).to.be.false;
-          expect(response.redirect).to.be.false;
-          expect(response.clientError).to.be.false;
-          expect(response.serverError).to.be.true;
+        expect(response.info).to.be.false;
+        expect(response.success).to.be.false;
+        expect(response.redirect).to.be.false;
+        expect(response.clientError).to.be.false;
+        expect(response.serverError).to.be.true;
 
-          expect(response.error).to.be.true;
+        expect(response.error).to.be.true;
 
-          expect(response.statusType).to.be.eql('serverError');
-        });
+        expect(response.statusType).to.be.eql('serverError');
       });
     });
 
