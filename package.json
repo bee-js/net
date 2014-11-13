@@ -1,0 +1,25 @@
+{
+  "name": "bee-net",
+  "version": "0.1.0",
+  "description": "XMLHTTP library",
+  "main": "src/net.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "gulp": "^3.8.10"
+  },
+  "devDependencies": {
+    "amd-loader": "0.0.5",
+    "chai": "^1.10.0",
+    "gulp": "^3.8.10",
+    "gulp-mocha": "^1.1.1",
+    "node-amd-require": "^0.2.2",
+    "sinon": "^1.11.1"
+  },
+  "scripts": {
+    "test": "gulp ci"
+  },
+  "author": "andrey@aejis.eu",
+  "license": "MIT"
+}
