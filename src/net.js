@@ -2,6 +2,7 @@ define(['promise', 'querystring'], function(Promise, QueryString) {
   "use strict";
 
   var net = {},
+      win = window,
       contentTypeHandlers = {},
       contentTypes = {},
       statusTypes = [null, 'info', 'success', 'redirect', 'clientError', 'serverError'],
@@ -101,6 +102,34 @@ define(['promise', 'querystring'], function(Promise, QueryString) {
     }
   };
 
+  function Request(type, url, options) {
+    this.type    = type.toUpperCase();
+    this.path    = url;
+    this.data    = {};
+    this.headers = {};
+  }
+
+  Request.prototype = {
+    send: function() {
+      var xhr = new win.XMLHttpRequest();
+
+      xhr.open(this.type, this.path, true);
+
+      return new Promise(function(resolve, reject) {
+        xhr.onload = function(ev) {
+          var response = new Response(xhr, request);
+
+          if (response.error) {
+            reject(response);
+          } else {
+            resolve(response);
+          }
+        };
+        xhr.send();
+      });
+    }
+  };
+
   function parseHeaders(data, object) {
     var headers  = data.split(lineEndReg),
         result   = {},
@@ -143,6 +172,7 @@ define(['promise', 'querystring'], function(Promise, QueryString) {
     return object;
   }
 
+  net.Request  = Request;
   net.Response = Response;
 
   return net;

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <link rel="stylesheet" href="./lib/mocha.css" type="text/css" media="screen" title="no title" charset="utf-8">
+</head>
+<body>
+    <div id="mocha"></div>
+
+    <script src="./lib/mocha.js" type="text/javascript" charset="utf-8"></script>
+    <script src="./lib/chai.js" type="text/javascript" charset="utf-8"></script>
+    <script src="./lib/sinon.js" type="text/javascript" charset="utf-8"></script>
+
+    <script src="./lib/require.js" type="text/javascript" charset="utf-8"></script>
+
+    <script src="config.js" type="text/javascript" charset="utf-8"></script>
+
+    <script type="text/javascript" charset="utf-8">
+      require([
+        "specs/methodsSpec.js",
+        "specs/responseSpec.js"
+      ], function() {
+        if (window.mochaPhantomJS) {
+          mochaPhantomJS.run();
+        } else {
+          mocha.run();
+        }
+      });
+    </script>
+</body>
+</html>
