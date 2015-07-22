@@ -1,32 +1,32 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang='en'>
 <head>
-    <meta charset="utf-8">
-    <title></title>
-    <link rel="stylesheet" href="./lib/mocha.css" type="text/css" media="screen" title="no title" charset="utf-8">
+  <meta charset='utf-8'>
+  <title>Tests</title>
+  <link rel='stylesheet' href='../node_modules/mocha/mocha.css' />
+
+  <!-- Polyfill (required by Babel) -->
+  <script src='../node_modules/babel-core/browser-polyfill.js'></script>
+
+  <!-- Testing libraries -->
+  <script src='../node_modules/mocha/mocha.js'></script>
+  <script src='../node_modules/chai/chai.js'></script>
+  <script src='../node_modules/sinon/pkg/sinon.js'></script>
+  <script src='../node_modules/sinon-chai/lib/sinon-chai.js'></script>
 </head>
 <body>
-    <div id="mocha"></div>
+  <!-- Required for browser reporter -->
+  <div id="mocha"></div>
 
-    <script src="./lib/mocha.js" type="text/javascript" charset="utf-8"></script>
-    <script src="./lib/chai.js" type="text/javascript" charset="utf-8"></script>
-    <script src="./lib/sinon.js" type="text/javascript" charset="utf-8"></script>
+  <script type="text/javascript">
+    mocha.setup({
+      ui: 'bdd',
+      ignoreLeaks: false,
+      timeout: 500
+    });
 
-    <script src="./lib/require.js" type="text/javascript" charset="utf-8"></script>
-
-    <script src="config.js" type="text/javascript" charset="utf-8"></script>
-
-    <script type="text/javascript" charset="utf-8">
-      require([
-        "specs/methodsSpec.js",
-        "specs/responseSpec.js"
-      ], function() {
-        if (window.mochaPhantomJS) {
-          mochaPhantomJS.run();
-        } else {
-          mocha.run();
-        }
-      });
-    </script>
+    window.expect = chai.expect;
+  </script>
+  <script src='../tmp/specs.js'></script>
 </body>
 </html>
