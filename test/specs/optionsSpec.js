@@ -47,4 +47,24 @@ describe('Options', function() {
       expect(result.eventListeners).to.have.property('timeout');
     });
   });
+
+  describe('type', function() {
+    it('urlencoded by default', function() {
+      request = new net.Request('post', '/');
+      request.set('one', 1).set('two', 2);
+      request.send();
+
+      expect(result.requestBody).to.be.eql('one=1&two=2');
+    });
+
+    it('json', function() {
+      request = new net.Request('post', '/');
+      request.set('one', 1).set('two', 2);
+      request.type('json')
+      request.send();
+
+      expect(result.requestHeaders['Content-Type']).to.have.string('application/json');
+      expect(result.requestBody).to.be.eql('{"one":1,"two":2}');
+    });
+  });
 });

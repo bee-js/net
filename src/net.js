@@ -4,25 +4,37 @@ let net = {},
     win = window,
     contentTypeHandlers = {},
     contentTypes = {},
-    statusTypes = [null, 'info', 'success', 'redirect', 'clientError', 'serverError'],
-    lineEndReg = /\r?\n/,
     getXhr;
 
-const RESPONSE_TYPES = [
-  'arraybuffer',
-  'blob',
-  'document',
-  'text',
-  'document'
-]
+const responseTypes = {
+  'arraybuffer': true,
+  'blob':        true,
+  'document':    true,
+  'text':        true
+}
+
+const statusTypes = [null, 'info', 'success', 'redirect', 'clientError', 'serverError'];
+
+const lineEndReg = /\r?\n/;
 
 function isObject(obj) { return obj === Object(obj); }
 
 net.Promise = ('Promise' in win) ? win.Promise : null;
 net.defaultOptions = {
   async: true,
-  type: 'html'
+  type: 'urlencoded'
 };
+
+net.serializeObject = function(obj) {
+  if (!isObject(obj)) return obj;
+
+  let pairs = [];
+  for (let key in obj) {
+    let value = (obj[key] == void 0) ? true : obj[key];
+    pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+  }
+  return pairs.join('&');
+}
 
 /**
  * Add custom contentType handler
@@ -40,45 +52,40 @@ net.defaultOptions = {
  *       getter: String.prototype.trim
  *     });
  */
-net.setHandler = function(contentType, options) {
-  let name;
+net.setHandler = function(name, options) {
+  var opts = {}
 
   if (typeof(options) == 'string') {
-    name = options;
-  } else {
-    name = options.name ? options.name : contentType;
+    opts.contentTypes = [options];
+  } else if(Array.isArray(options)) {
+    opts.contentTypes = options;
   }
 
-  if (options === void 0 && typeof(contentType) == 'object') {
-    options = contentType;
+  if (isObject(name)) {
+    Object.assign(opts, name);
   } else {
-    contentTypes[contentType] = name;
+    opts.name = name;
+    Object.assign(opts, options);
   }
 
-  if (typeof(options) == 'object') contentTypeHandlers[name] = options;
+  opts.contentTypes.forEach(ct => { contentTypes[ct] = name; })
+
+  contentTypeHandlers[name] = opts;
 
   return name;
 };
 
-net.setHandler('text/html', 'html');
+net.setHandler('html', 'text/html');
+net.setHandler('urlencoded', {
+  contentTypes: ['application/x-www-form-urlencoded'],
+  setter: net.serializeObject
+});
 
-net.setHandler('application/json', {
-  name: 'json',
+net.setHandler('json', {
+  contentTypes: ['application/json'],
   getter: JSON.parse, // IE 10-11 does not supports responseType JSON
   setter: JSON.stringify
 });
-
-net.serializeObject = function(obj) {
-  if (!isObject(obj)) return obj;
-
-  var pairs = [];
-  for (var key in obj) {
-    if (null != obj[key]) {
-      pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(obj[key])}`);
-    }
-  }
-  return pairs.join('&');
-}
 
 /**
  * Response object
@@ -119,7 +126,10 @@ function Response(xhr, request) {
 
   // Set body props
   this.text = responseText;
-  this._parseResponseBody();
+
+  if (xhr.responseType != '' && responseTypes[xhr.responseType]) {
+    this[xhr.responseType] = this.body = xhr.response; // TODO: XML response
+  } else this._parseResponseBody();
 }
 
 Response.prototype = {
@@ -137,7 +147,7 @@ Response.prototype = {
     headers.pop();
 
     while(i < l) {
-      var header = headers[i++],
+      let header = headers[i++],
           parts  = header.split(':'),
           key    = parts.shift(),
           value  = parts.join(':').trim();
@@ -177,6 +187,26 @@ function Request(type, url, options) {
 }
 
 Request.prototype = {
+  set: function(key, value) {
+    if (key instanceof FormData) { // TODO: File, Blob, ArrayBuffer
+      this.form = key;
+    } else if (value === void 0) {
+      if (isObject(key)) {
+        Object.assign(this.data, key);
+      } else this.data[key] = true;
+    } else this.data[key] = value;
+
+    return this;
+  },
+
+  setHeader: function(key, value) {
+    if (value === void 0 && isObject(key)) {
+      Object.assign(this.headers, key);
+    } else this.headers[key] = value;
+
+    return this;
+  },
+
   setOption: function(opt, val) {
     this.options[opt] = val;
     return this;
@@ -190,18 +220,8 @@ Request.prototype = {
     return this.setOption('timeout', val);
   },
 
-  set: function(key, value) {
-    if (key instanceof FormData) {
-      this.form = key;
-    } else if (value === void 0) {
-      if (isObject(key)) {
-        Object.assign(this.data, key);
-      } else this.data[key] = true;
-    } else {
-      this.data[key] = value;
-    }
-
-    return this;
+  type: function(val) {
+    return this.setOption('type', val);
   },
 
   send: function() {
@@ -209,27 +229,38 @@ Request.prototype = {
         self = this,
         type = self.options.type,
         url  = self.path,
-        handler,
+        responseType = self.options.responseType,
+        handler = contentTypeHandlers[type],
+        headers = Object.create(self.headers),
         data;
 
-    if (self.method === 'GET' || type === 'urlencoded') {
-      data = null;
-      let query = net.serializeObject(self.data);
-      if (query !== '') url += ~url.indexOf('?') ? '&' + query : '?' + query;
-    } else if (self.form) {
-      data = self.form;
-      for (var key in self.data) {
-        data.append(key, data);
-      }
-    } else if (handler = contentTypeHandlers[type] && handler.setter) {
-      data = handler.setter.call(self.data, self.data);
-    } else data = self.data;
+    if (Object.keys(self.data).length > 0 || self.form) {
+      if (self.method === 'GET') {
+        data = null;
+        let query = net.serializeObject(self.data);
+        if (query !== '') url += ~url.indexOf('?') ? '&' + query : '?' + query;
+      } else if (self.form) {
+        data = self.form;
+        for (let key in self.data) data.append(key, data);
+      } else if (handler && handler.setter) {
+        data = handler.setter.call(self.data, self.data);
+        if (!('Content-Type' in headers)) headers['Content-Type'] = handler.contentTypes[0];
+      } else data = self.data;
+    }
 
     xhr.open(self.method, url, self.options.async);
 
+    if (responseType && responseTypes[responseType]) {
+      xhr.responseType = responseType;
+    }
+
+    for (let header in headers) {
+      xhr.setRequestHeader(header, headers[header]);
+    }
+
     return new net.Promise(function(resolve, reject) {
       xhr.addEventListener('load', function() {
-        let response = new Response(xhr, request);
+        let response = new Response(xhr, self);
 
         resolve(response);
       });
@@ -239,9 +270,7 @@ Request.prototype = {
       if (self.options.timeout) {
         xhr.timeout = self.options.timeout;
 
-        xhr.addEventListener('timeout', function() {
-          reject(xhr);
-        });
+        xhr.addEventListener('timeout', ()=>{ reject(xhr) });
       }
 
       xhr.send(data);

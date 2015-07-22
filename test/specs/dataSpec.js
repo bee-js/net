@@ -30,7 +30,7 @@ describe('Data', function() {
 
   it('should merge data', function() {
     request = new net.Request('get', '/');
-    request.set('one', 1).set({two: 2, three: 3});
+    request.set('one', 1).set({ two: 2, three: 3 });
     request.send();
 
     expect(result.url).to.be.eql('/?one=1&two=2&three=3');
@@ -38,16 +38,15 @@ describe('Data', function() {
 
   it('should serialize POST data', function() {
     request = new net.Request('post', '/');
-    request.set({one: 1, two: 2});
+    request.set({ one: 1, two: 2 });
     request.send();
 
-    expect(result.requestBody).to.be.eql({one: 1, two: 2});
+    expect(result.requestBody).to.be.eql('one=1&two=2');
   });
 
   it('should accept FormData', function() {
     let data = new FormData();
     data.append('one', 1);
-    data.append('two', 2);
 
     request = new net.Request('post', '/');
     request.set(data);
