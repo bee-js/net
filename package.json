@@ -8,23 +8,13 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "babel-core": "^5.8.3",
-    "chai": "^3.2.0",
-    "chai-as-promised": "^5.1.0",
-    "del": "^1.2.0",
-    "esperanto": "^0.7.3",
+    "gobble": "^0.10.2",
+    "gobble-babel": "^5.5.8",
+    "gobble-esperanto-bundle": "^0.2.1",
+    "gobble-sorcery": "^0.3.0",
+    "gobble-uglifyjs": "^0.2.1",
     "gulp": "^3.9.0",
-    "gulp-babel": "^5.1.0",
-    "gulp-file": "^0.2.0",
-    "gulp-mocha-phantomjs": "^0.8.0",
-    "gulp-plumber": "^1.0.1",
-    "gulp-sourcemaps": "^1.5.2",
-    "gulp-uglify": "^1.2.0",
-    "mkdirp": "^0.5.1",
-    "mocha": "^2.2.5",
-    "path": "^0.11.14",
-    "sinon": "^1.15.4",
-    "sinon-chai": "^2.8.0"
+    "mkdirp": "^0.5.1"
   },
   "scripts": {
     "test": "gulp ci"

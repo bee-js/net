@@ -25,7 +25,7 @@ let request = net.Request('post', '/users')
 
 request.then(function(response) {
   let notification = document.getElementById('notification'),
-      cssClass = response.ok ? 'success' : 'failure';
+      cssClass = response.success ? 'success' : 'failure';
 
   notification.innerText = response.json.message;
   notification.classList.add(cssClass);

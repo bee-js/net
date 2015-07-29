@@ -1,15 +1,6 @@
-var fs = require('fs');
-var path = require('path');
-var gulp = require('gulp');
-var del = require('del');
-var mkdirp = require('mkdirp');
-var sourcemaps = require('gulp-sourcemaps');
-var babel = require('gulp-babel');
-var file = require('gulp-file');
-var esperanto = require('esperanto');
-var plumber = require('gulp-plumber');
-var uglify = require('gulp-uglify');
-var mocha = require('gulp-mocha-phantomjs');
+var gobble = require('gobble'),
+    gulp   = require('gulp'),
+    mkdirp = require('mkdirp');
 
 // Disable: modules, classes, unicodeRegex, forOf
 var babelOpts = {
@@ -27,51 +18,28 @@ var babelOpts = {
   ]
 };
 
-var destinationFolder = 'build/';
+var es5 = gobble('src/net.js').transform('babel', babelOpts);
 
-var config = {
-  entryFileName: 'net.js',
-  exportFileName: 'net'
-};
+gulp.task('build:umd', function(done) {
+  mkdirp.sync('build/umd');
 
-gulp.task('js:babel', function() {
-  return gulp.src('src/net.js')
-    .pipe(sourcemaps.init())
-    .pipe(babel(babelOpts))
-    .pipe(sourcemaps.write('./'))
-    .pipe(gulp.dest('tmp'));
+  var umd = es5.transform('esperanto-bundle', {
+    type: 'umd',
+    entry: 'net.js',
+    name: 'net'
+  });
+  var umdMin = umd.transform('uglifyjs', { ext: '.min.js' });
+  gobble([umdMin, umd]).build({ dest: 'build/umd', force: true }).then(done);
 });
 
-gulp.task('clean-tmp', function(cb) {
-  del(['tmp'], cb);
-});
+gulp.task('build:amd', function(done) {
+  mkdirp.sync('build/amd');
+  var amd = es5.transform('esperanto-bundle', {
+    type: 'amd',
+    entry: 'net.js',
+    name: 'net'
+  });
+  var amdMin = amd.transform('uglifyjs', { ext: '.min.js' });
 
-gulp.task('test:build', function(done) {
-  esperanto.bundle({
-    base: 'test',
-    entry: 'specs.js'
-  }).then(function(bundle) {
-    var res = bundle.concat({
-      sourceMap: true,
-      sourceMapFile: 'test.js',
-      sourceMapName: 'test.js.map'
-    });
-
-    // Write the generated sourcemap
-    mkdirp.sync('tmp');
-    fs.writeFileSync(path.join('tmp', 'specs.js'), res.map.toString());
-
-    file('specs.js', res.code, { src: true })
-      .pipe(plumber())
-      .pipe(sourcemaps.init({ loadMaps: true }))
-      .pipe(babel(babelOpts))
-      .pipe(sourcemaps.write('./', { addComment: false }))
-      .pipe(gulp.dest('tmp/'))
-      .on('end', done)
-  }).catch(done);
-});
-
-gulp.task('test', ['test:build'], function() {
-  return gulp.src('test/test.html')
-    .pipe(mocha({ reporter: 'dot' }));
+  gobble([amdMin, amd]).build({ dest: 'build/amd', force: true });
 });
