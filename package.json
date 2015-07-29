@@ -8,13 +8,19 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "chai": "^3.2.0",
+    "chai-as-promised": "^5.1.0",
     "gobble": "^0.10.2",
     "gobble-babel": "^5.5.8",
     "gobble-esperanto-bundle": "^0.2.1",
     "gobble-sorcery": "^0.3.0",
     "gobble-uglifyjs": "^0.2.1",
     "gulp": "^3.9.0",
-    "mkdirp": "^0.5.1"
+    "gulp-mocha-phantomjs": "^0.8.1",
+    "mkdirp": "^0.5.1",
+    "mocha": "^2.2.5",
+    "sinon": "^1.15.4",
+    "sinon-chai": "^2.8.0"
   },
   "scripts": {
     "test": "gulp ci"

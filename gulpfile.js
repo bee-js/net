@@ -1,6 +1,7 @@
 var gobble = require('gobble'),
     gulp   = require('gulp'),
-    mkdirp = require('mkdirp');
+    mkdirp = require('mkdirp'),
+    mocha  = require('gulp-mocha-phantomjs');
 
 // Disable: modules, classes, unicodeRegex, forOf
 var babelOpts = {
@@ -24,6 +25,7 @@ gulp.task('build:umd', function(done) {
   mkdirp.sync('build/umd');
 
   var umd = es5.transform('esperanto-bundle', {
+    strict: false,
     type: 'umd',
     entry: 'net.js',
     name: 'net'
@@ -35,11 +37,26 @@ gulp.task('build:umd', function(done) {
 gulp.task('build:amd', function(done) {
   mkdirp.sync('build/amd');
   var amd = es5.transform('esperanto-bundle', {
+    strict: false,
     type: 'amd',
-    entry: 'net.js',
-    name: 'net'
+    entry: 'net.js'
   });
   var amdMin = amd.transform('uglifyjs', { ext: '.min.js' });
 
   gobble([amdMin, amd]).build({ dest: 'build/amd', force: true });
+});
+
+gulp.task('test', function(done) {
+  gobble('test').transform('esperanto-bundle', {
+    strict: false,
+    type: 'concat',
+    entry: 'specs.js'
+  }).transform('babel', babelOpts)
+    .build({ dest: 'tmp', force: true })
+    .then(function() {
+      gulp.src('test/test.html')
+          .pipe(mocha({ reporter: 'dot' }));
+    })
+    .then(done)
+    .catch(done);
 });
