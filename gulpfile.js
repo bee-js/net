@@ -30,20 +30,22 @@ gulp.task('build:umd', function(done) {
     entry: 'net.js',
     name: 'net'
   });
+
   var umdMin = umd.transform('uglifyjs', { ext: '.min.js' });
   gobble([umdMin, umd]).build({ dest: 'build/umd', force: true }).then(done);
 });
 
 gulp.task('build:amd', function(done) {
   mkdirp.sync('build/amd');
+
   var amd = es5.transform('esperanto-bundle', {
     strict: false,
     type: 'amd',
     entry: 'net.js'
   });
-  var amdMin = amd.transform('uglifyjs', { ext: '.min.js' });
 
-  gobble([amdMin, amd]).build({ dest: 'build/amd', force: true });
+  var amdMin = amd.transform('uglifyjs', { ext: '.min.js' });
+  gobble([amdMin, amd]).build({ dest: 'build/amd', force: true }).then(done);
 });
 
 gulp.task('test', function(done) {

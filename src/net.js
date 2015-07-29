@@ -18,6 +18,9 @@ const statusTypes = [null, 'info', 'success', 'redirect', 'clientError', 'server
 const lineEndReg = /\r?\n/;
 
 function isObject(obj) { return obj === Object(obj); }
+function defineReader(obj, prop, value) {
+  Object.defineProperty(obj, prop, { writable: false, value: value });
+}
 
 net.Promise = ('Promise' in win) ? win.Promise : null;
 net.defaultOptions = {
@@ -93,43 +96,41 @@ net.setHandler('json', {
 function Response(xhr, request) {
   let status       = xhr.status,
       contentType  = xhr.getResponseHeader('Content-Type'),
-      responseText = xhr.responseText;
+      responseText = xhr.responseText,
+      i = statusTypes.length, type, self = this;
 
   // IE9 fix http://stackoverflow.com/questions/10046972/msie-returns-status-code-of-1223-for-ajax-request
   if (status === 1223) status = 204;
 
   contentType = (contentType || '').split(';')[0];
 
-  // Create stubs for responses
-  this.info        = false;
-  this.success     = false;
-  this.redirect    = false;
-  this.clientError = false;
-  this.serverError = false;
-
   // Inject origins
   this.xhr     = xhr;
   this.request = request;
 
   // Set status props
-  this.status     = status;
-  this.statusType = statusTypes[status / 100 | 0];
-  this.statusText = xhr.statusText;
-  this[this.statusType] = true;
+  defineReader(self, 'status', status);
+  defineReader(self, 'statusType', statusTypes[status / 100 | 0]);
+  defineReader(self, 'statusText', xhr.statusText);
 
-  this.error = this.clientError || this.serverError;
+  while (type=statusTypes[--i]) defineReader(this, type, type == this.statusType);
+
+  defineReader(self, 'error', this.clientError || this.serverError);
 
   // Set headers props
-  this._parseHeaders(xhr.getAllResponseHeaders());
-  this.contentType = contentType;
-  this.type = contentTypes[contentType];
+  self._parseHeaders(xhr.getAllResponseHeaders());
+
+  defineReader(self, 'contentType', contentType);
+  defineReader(self, 'type', contentTypes[contentType]);
 
   // Set body props
-  this.text = responseText;
+  defineReader(self, 'text', responseText);
 
   if (xhr.responseType != '' && responseTypes[xhr.responseType]) {
-    this[xhr.responseType] = this.body = xhr.response; // TODO: XML response
-  } else this._parseResponseBody();
+    // TODO: XML response
+    defineReader(self, xhr.responseType, xhr.response);
+    defineReader(self, 'body', xhr.response);
+  } else self._parseResponseBody();
 }
 
 Response.prototype = {
@@ -156,8 +157,8 @@ Response.prototype = {
       downcase[key.toLowerCase()] = value;
     }
 
-    this.headers  = result;
-    this._headers = downcase;
+    defineReader(this, 'headers', result);
+    defineReader(this, '_headers', downcase);
   },
 
   _parseResponseBody: function() {
@@ -167,13 +168,12 @@ Response.prototype = {
 
     if (type && handler && handler.getter) {
       try {
-        this[type] = this.body = handler.getter.call(body, body);
-      } catch(e) {
-        this.body = body;
-      }
-    } else {
-      this.body = body;
+        body = handler.getter.call(body, body);
+        defineReader(this, type, body);
+      } catch(e) {}
     }
+
+    defineReader(this, 'body', body);
   }
 };
 

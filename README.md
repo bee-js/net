@@ -44,4 +44,15 @@ let request = net.Request('post', '/users')
                  .send()
 ```
 
+### Result object
+
+```js
+result.status; //=> 200
+result.statusType; //=> 'success'
+
+result.info; //=> false
+result.success; //=> true
+result.redirect; //=> false
+```
+
 Other usage examples will be added soon. See `test/specs` now.
