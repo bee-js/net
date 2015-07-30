@@ -34,6 +34,10 @@ describe('Request', function() {
       server.autoRespond = true;
     });
 
+    afterEach(function() {
+      server.restore();
+    });
+
     it('should resolve when ok', function() {
       var request = new net.Request('get', '/ok');
 

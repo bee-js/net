@@ -3,5 +3,3 @@ import 'specs/optionsSpec.js';
 import 'specs/requestSpec.js';
 import 'specs/responseSpec.js';
 import 'specs/dataSpec.js';
-
-mocha.run();

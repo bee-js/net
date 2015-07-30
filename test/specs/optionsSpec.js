@@ -60,11 +60,50 @@ describe('Options', function() {
     it('json', function() {
       request = new net.Request('post', '/');
       request.set('one', 1).set('two', 2);
-      request.type('json')
+      request.type('json');
       request.send();
 
       expect(result.requestHeaders['Content-Type']).to.have.string('application/json');
       expect(result.requestBody).to.be.eql('{"one":1,"two":2}');
+    });
+
+    it('content-type', function() {
+      request = new net.Request('post', '/');
+      request.set('{"one":1,"two":2}');
+      request.type('application/json');
+      request.send();
+
+      expect(result.requestHeaders['Content-Type']).to.have.string('application/json');
+      expect(result.requestBody).to.be.eql('{"one":1,"two":2}');
+    });
+  });
+
+  describe('expect', function() {
+    it('sets responseType for xhr if applicable', function() {
+      request = new net.Request('post', '/');
+      request.expect('blob');
+      request.send();
+
+      expect(result.responseType).to.be.eql('blob');
+    });
+
+    it('does not set responseType for xhr if not applicable', function() {
+      request = new net.Request('post', '/');
+      request.expect('json');
+      request.send();
+
+      expect(result.responseType).to.not.be.eql('json');
+    });
+
+    it('forces expected type', function() {
+      request = new net.Request('post', '/');
+      request.expect('json');
+      request.send();
+
+      result.respond(200, { 'Content-Type': 'text/plain' }, '{"one":1,"two":2}');
+
+      let res = new net.Response(result, request);
+      expect(res.body.one).to.be.eql(1);
     });
   });
 });

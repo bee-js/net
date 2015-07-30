@@ -11,13 +11,22 @@ const responseTypes = {
   'blob':        true,
   'document':    true,
   'text':        true
-}
+};
+
+const nativeTypes = {
+  '[object ArrayBuffer]': true,
+  '[object Blob]': true,
+  '[object File]': true
+};
 
 const statusTypes = [null, 'info', 'success', 'redirect', 'clientError', 'serverError'];
 
 const lineEndReg = /\r?\n/;
 
-function isObject(obj) { return obj === Object(obj); }
+function isObject(obj) { return Object.prototype.toString.call(obj) === '[object Object]'; }
+function isNativeType(obj) {
+  return nativeTypes[Object.prototype.toString.call(obj)];
+}
 function defineReader(obj, prop, value) {
   Object.defineProperty(obj, prop, { writable: false, value: value });
 }
@@ -42,13 +51,13 @@ net.serializeObject = function(obj) {
 /**
  * Add custom contentType handler
  *
- *     net.setHandler('application/x-www-form-urlencoded', {
- *       name: 'urlencoded',
+ *     net.setHandler('urlencoded', {
+ *       contentTypes: ['application/x-www-form-urlencoded'],
  *       getter: QueryString.parse,
  *       setter: QueryString.stringify
  *     });
  *
- *     net.setHandler('text/plain', 'text');
+ *     net.setHandler('text', 'text/plain');
  *
  *     net.setHandler({
  *       name: 'text',
@@ -121,7 +130,7 @@ function Response(xhr, request) {
   self._parseHeaders(xhr.getAllResponseHeaders());
 
   defineReader(self, 'contentType', contentType);
-  defineReader(self, 'type', contentTypes[contentType]);
+  defineReader(self, 'type', request.options.responseType || contentTypes[contentType]);
 
   // Set body props
   defineReader(self, 'text', responseText);
@@ -162,8 +171,8 @@ Response.prototype = {
   },
 
   _parseResponseBody: function() {
-    let type    = contentTypes[this.contentType],
-        handler = contentTypeHandlers[this.type],
+    let type    = this.type,
+        handler = contentTypeHandlers[type],
         body    = this.text;
 
     if (type && handler && handler.getter) {
@@ -177,8 +186,8 @@ Response.prototype = {
   }
 };
 
-function Request(type, url, options) {
-  this.method  = type.toUpperCase();
+function Request(method, url, options) {
+  this.method  = method.toUpperCase();
   this.path    = url;
   this.data    = {};
   this.form    = null;
@@ -188,13 +197,14 @@ function Request(type, url, options) {
 
 Request.prototype = {
   set: function(key, value) {
-    if (key instanceof FormData) { // TODO: File, Blob, ArrayBuffer
-      this.form = key;
-    } else if (value === void 0) {
+    if (value === void 0) {
       if (isObject(key)) {
         Object.assign(this.data, key);
-      } else this.data[key] = true;
-    } else this.data[key] = value;
+      } else this.form = key;
+    } else {
+      if (isNativeType(value)) this.form = this.form || new FormData();
+      this.data[key] = value;
+    }
 
     return this;
   },
@@ -224,6 +234,10 @@ Request.prototype = {
     return this.setOption('type', val);
   },
 
+  expect: function(val) {
+    return this.setOption('responseType', val);
+  },
+
   send: function() {
     let xhr = new win.XMLHttpRequest(),
         self = this,
@@ -234,18 +248,24 @@ Request.prototype = {
         headers = Object.create(self.headers),
         data;
 
+    // Content type '**/**'
+    if (~type.indexOf('/')) headers['Content-Type'] = type;
+
     if (Object.keys(self.data).length > 0 || self.form) {
-      if (self.method === 'GET') {
+      if (self.method === 'GET') { // No body
         data = null;
         let query = net.serializeObject(self.data);
         if (query !== '') url += ~url.indexOf('?') ? '&' + query : '?' + query;
       } else if (self.form) {
         data = self.form;
-        for (let key in self.data) data.append(key, data);
+        if (data instanceof FormData) {
+          for (let key in self.data) data.append(key, data);
+        }
       } else if (handler && handler.setter) {
         data = handler.setter.call(self.data, self.data);
-        if (!('Content-Type' in headers)) headers['Content-Type'] = handler.contentTypes[0];
       } else data = self.data;
+
+      if (handler && !('Content-Type' in headers)) headers['Content-Type'] = handler.contentTypes[0];
     }
 
     xhr.open(self.method, url, self.options.async);

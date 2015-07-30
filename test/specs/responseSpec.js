@@ -4,14 +4,13 @@ describe('Response', function() {
   var xhr, request, response;
 
   beforeEach(function() {
+    request = new net.Request('GET', '/');
     xhr = new sinon.FakeXMLHttpRequest();
     xhr.open();
   });
 
   describe('metadata', function() {
     beforeEach(function() {
-      request  = { xhr: xhr }; // Stub
-
       xhr.respond(200);
       response = new net.Response(xhr, request);
     });
@@ -28,7 +27,7 @@ describe('Response', function() {
   describe('status', function() {
     it('info', function() {
       xhr.respond(101);
-      response = new net.Response(xhr);
+      response = new net.Response(xhr, request);
 
       expect(response.status).to.be.eql(101);
       expect(response.statusText).to.be.eql('Switching Protocols');
@@ -46,7 +45,7 @@ describe('Response', function() {
 
     it('success', function() {
       xhr.respond(201);
-      response = new net.Response(xhr);
+      response = new net.Response(xhr, request);
 
       expect(response.status).to.be.eql(201);
       expect(response.statusText).to.be.eql('Created');
@@ -64,7 +63,7 @@ describe('Response', function() {
 
     it('redirect', function() {
       xhr.respond(302);
-      response = new net.Response(xhr);
+      response = new net.Response(xhr, request);
 
       expect(response.status).to.be.eql(302);
       expect(response.statusText).to.be.eql('Found');
@@ -82,7 +81,7 @@ describe('Response', function() {
 
     it('clientError', function() {
       xhr.respond(404);
-      response = new net.Response(xhr);
+      response = new net.Response(xhr, request);
 
       expect(response.status).to.be.eql(404);
       expect(response.statusText).to.be.eql('Not Found');
@@ -100,7 +99,7 @@ describe('Response', function() {
 
     it('clientError', function() {
       xhr.respond(502);
-      response = new net.Response(xhr);
+      response = new net.Response(xhr, request);
 
       expect(response.status).to.be.eql(502);
       expect(response.statusText).to.be.eql('Bad Gateway');
@@ -118,7 +117,7 @@ describe('Response', function() {
 
     it('fix IE9 bug', function() {
       xhr.respond(1223);
-      response = new net.Response(xhr);
+      response = new net.Response(xhr, request);
 
       expect(response.status).to.be.eql(204);
     });
@@ -127,7 +126,7 @@ describe('Response', function() {
   describe('headers', function() {
     beforeEach(function() {
       xhr.respond(200, { 'Content-Type': 'application/json', 'X-Custom-Header': 'somedata' });
-      response = new net.Response(xhr);
+      response = new net.Response(xhr, request);
     });
 
     it('should get headers case-insensitive', function() {
@@ -152,14 +151,14 @@ describe('Response', function() {
   describe('data', function() {
     it('should contains response text', function() {
       xhr.respond(200, { 'Content-Type': 'text/plain' }, 'Hello!');
-      response = new net.Response(xhr);
+      response = new net.Response(xhr, request);
 
       expect(response.text).to.be.eql('Hello!');
     });
 
     it('should parse JSON', function() {
       xhr.respond(200, { 'Content-Type': 'application/json' }, '{"name": "Andrey"}');
-      response = new net.Response(xhr);
+      response = new net.Response(xhr, request);
 
       expect(response.json).to.be.eql({ name: 'Andrey' });
       expect(response.body).to.be.eql({ name: 'Andrey' });

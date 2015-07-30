@@ -16,7 +16,7 @@ May require polyfills for:
 ```js
 import net from 'net.js';
 
-let request = net.Request('post', '/users')
+let request = new net.Request('post', '/users')
                  .setHeader('Auth-Token', 'xxx-secret')
                  .set('name', 'John Doe')
                  .set('email', 'john@example.org')
@@ -33,26 +33,238 @@ request.then(function(response) {
 });
 ```
 
+### Configuration
+
+#### Promise
+
+net uses native promise by default. You can change this by:
+
+```js
+import Bluebird from 'vendor/bluebird';
+
+net.Promise = Bluebird;
+```
+
+#### Handlers
+
+Handlers allows you to register a type, automatically serialize/deserialize data and make a shortcut for setting Content-Type
+
+```js
+net.setHandler('urlencoded', {
+  contentTypes: ['application/x-www-form-urlencoded'],
+  getter: QueryString.parse,
+  setter: QueryString.stringify
+});
+
+net.setHandler('text', 'text/plain');
+
+net.setHandler({
+  name: 'text',
+  contentTypes: ['text/plain'],
+  getter: String.prototype.trim
+});
+```
+
+### Request builder
+
+#### Constructor
+
+```js
+new net.Request(method, url, options);
+```
+
+Where:
+
+- **method** can be `GET`, `HEAD`, `POST`, `PUT`, `OPTIONS`, `DELETE` or other valid http verb
+- **url** request url, can be relative or absolute (if CORS supported by browser)
+- **options** request options:
+  - **async** set this option to `false` if you want to perform synchronous request (not recommended)
+  - **timeout** request timeout, in milliseconds
+  - **type** registered request type or content-type string
+  - **responseType** expected response type, can be registered type or `arraybuffer`, `blob` or `document`
+
+Options can also be specified by corresponding methods documented below or `setOption()` method:
+
+```js
+request.setOption('timeout', 1000);
+```
+
+Example:
+
+```js
+let request = new net.Request('POST', '/users/', {
+  timeout: 2000,
+  type: 'json',
+  responseType: 'json'
+});
+```
+
+#### data
+
+Data can be added as key and value pairs:
+
+```js
+request.set('name', 'Joe');
+```
+
+or an object with keys and values:
+
+```js
+request.set({name: 'Joe', age: 26});
+```
+
+or just a plain string
+
+```js
+request.set('Hello server');
+```
+
 FormData can be used too:
 
 ```js
 let form = document.getElementById('user-form');
 let data = new FormData(form);
-let request = net.Request('post', '/users')
-                 .setHeader('Auth-Token', 'xxx-secret')
-                 .set(data)
-                 .send()
+
+request.set(data);
 ```
 
-### Result object
+building multipart request is simple: Blob, ArrayBuffer or File can be the part of data:
 
 ```js
-result.status; //=> 200
-result.statusType; //=> 'success'
-
-result.info; //=> false
-result.success; //=> true
-result.redirect; //=> false
+request.set('name', 'Joe');
+request.set('avatar', file);
 ```
 
-Other usage examples will be added soon. See `test/specs` now.
+#### headers
+
+```js
+request.setHeader('X-Requested-With', 'beejs-net');
+```
+
+#### async
+
+If you *really* wants to make async request:
+
+```js
+request.async(false);
+```
+
+#### timeout
+
+The number of milliseconds a request can take before automatically being terminated
+
+```js
+request.timeout(2000);
+```
+
+#### type
+
+Registered request type or content type. If type have setter, the data will be serialized by setter function.
+
+```js
+request.type('json');
+request.type('application/json'); // Data will not be serialized
+```
+
+#### expect
+
+The same as `responseType` option:
+
+```js
+request.expect('json');
+```
+
+note, that in this case, response Content-Type will be ignored.
+
+### Response object
+
+When request is successful (no network errors), it resolves promise with response object:
+
+```js
+request.then(function(response) {
+  console.log(response);
+});
+```
+
+It incapsulates the original XMLHTTPRequest and request objects:
+
+```js
+response.xhr;
+response.request;
+```
+
+and contains some useful information like:
+
+#### status
+
+Lets say we received a 200 OK response from server:
+
+```js
+response.status; //=> 200
+response.statusType; //=> 'success'
+response.statusText; //=> 'OK'
+```
+
+also, some sugar available
+
+```js
+response.info; //=> false
+response.success; //=> true
+response.redirect; //=> false
+response.clientError; //=> false
+response.serverError; //=> false
+
+response.error; //=> false
+```
+
+the same for 404:
+
+```js
+response.status; //=> 404
+response.statusType; //=> 'clientError'
+response.statusText; //=> 'Not Found'
+
+response.success; //=> false
+response.clientError; //=> true
+response.serverError; //=> false
+
+response.error; //=> true
+```
+
+#### data
+
+Response body can be accessed as raw string:
+
+```js
+response.text; //=> 'Hello from server'
+```
+
+If response headers contains content type, which registered by `.setHandler` function ('application/json' and 'application/x-www-form-urlencoded' works out of box)
+the body will be parsed and can be accessed by handler name:
+
+```js
+response.text; //=> '{ "id": 1, "name": "Joe" }'
+response.body; //=> { id: 1, name: "Joe" }
+response.json; //=> { id: 1, name: "Joe" }
+
+response.json.id; //=> 1
+response.type: //=> 'json'
+```
+
+#### headers
+
+Headers can be accessed as object or with function. The second way is case-insensitive:
+
+```js
+response.headers['Content-Type']; //=> 'application/json'
+response.getHeader('Content-Type'); //=> 'application/json'
+response.getHeader('content-type'); //=> 'application/json'
+```
+
+shortcut for `Content-Type` header:
+
+```js
+response.contentType; //=> 'application/json'
+// if registered:
+response.type; //=> 'json'
+```
