@@ -17,12 +17,24 @@ define(function () {
     'text': true
   };
 
+  var nativeTypes = {
+    '[object ArrayBuffer]': true,
+    '[object Blob]': true,
+    '[object File]': true
+  };
+
   var statusTypes = [null, 'info', 'success', 'redirect', 'clientError', 'serverError'];
 
   var lineEndReg = /\r?\n/;
 
   function isObject(obj) {
-    return obj === Object(obj);
+    return Object.prototype.toString.call(obj) === '[object Object]';
+  }
+  function isNativeType(obj) {
+    return nativeTypes[Object.prototype.toString.call(obj)];
+  }
+  function defineReader(obj, prop, value) {
+    Object.defineProperty(obj, prop, { writable: false, value: value });
   }
 
   net.Promise = 'Promise' in win ? win.Promise : null;
@@ -45,13 +57,13 @@ define(function () {
   /**
    * Add custom contentType handler
    *
-   *     net.setHandler('application/x-www-form-urlencoded', {
-   *       name: 'urlencoded',
+   *     net.setHandler('urlencoded', {
+   *       contentTypes: ['application/x-www-form-urlencoded'],
    *       getter: QueryString.parse,
    *       setter: QueryString.stringify
    *     });
    *
-   *     net.setHandler('text/plain', 'text');
+   *     net.setHandler('text', 'text/plain');
    *
    *     net.setHandler({
    *       name: 'text',
@@ -101,43 +113,43 @@ define(function () {
   function Response(xhr, request) {
     var status = xhr.status,
         contentType = xhr.getResponseHeader('Content-Type'),
-        responseText = xhr.responseText;
+        responseText = xhr.responseText,
+        i = statusTypes.length,
+        type = undefined,
+        self = this;
 
     // IE9 fix http://stackoverflow.com/questions/10046972/msie-returns-status-code-of-1223-for-ajax-request
     if (status === 1223) status = 204;
 
     contentType = (contentType || '').split(';')[0];
 
-    // Create stubs for responses
-    this.info = false;
-    this.success = false;
-    this.redirect = false;
-    this.clientError = false;
-    this.serverError = false;
-
     // Inject origins
     this.xhr = xhr;
     this.request = request;
 
     // Set status props
-    this.status = status;
-    this.statusType = statusTypes[status / 100 | 0];
-    this.statusText = xhr.statusText;
-    this[this.statusType] = true;
+    defineReader(self, 'status', status);
+    defineReader(self, 'statusType', statusTypes[status / 100 | 0]);
+    defineReader(self, 'statusText', xhr.statusText);
 
-    this.error = this.clientError || this.serverError;
+    while (type = statusTypes[--i]) defineReader(this, type, type == this.statusType);
+
+    defineReader(self, 'error', this.clientError || this.serverError);
 
     // Set headers props
-    this._parseHeaders(xhr.getAllResponseHeaders());
-    this.contentType = contentType;
-    this.type = contentTypes[contentType];
+    self._parseHeaders(xhr.getAllResponseHeaders());
+
+    defineReader(self, 'contentType', contentType);
+    defineReader(self, 'type', request.options.responseType || contentTypes[contentType]);
 
     // Set body props
-    this.text = responseText;
+    defineReader(self, 'text', responseText);
 
     if (xhr.responseType != '' && responseTypes[xhr.responseType]) {
-      this[xhr.responseType] = this.body = xhr.response; // TODO: XML response
-    } else this._parseResponseBody();
+      // TODO: XML response
+      defineReader(self, xhr.responseType, xhr.response);
+      defineReader(self, 'body', xhr.response);
+    } else self._parseResponseBody();
   }
 
   Response.prototype = {
@@ -164,46 +176,64 @@ define(function () {
         downcase[key.toLowerCase()] = value;
       }
 
-      this.headers = result;
-      this._headers = downcase;
+      defineReader(this, 'headers', result);
+      defineReader(this, '_headers', downcase);
     },
 
     _parseResponseBody: function () {
-      var type = contentTypes[this.contentType],
-          handler = contentTypeHandlers[this.type],
+      var type = this.type,
+          handler = contentTypeHandlers[type],
           body = this.text;
 
       if (type && handler && handler.getter) {
         try {
-          this[type] = this.body = handler.getter.call(body, body);
-        } catch (e) {
-          this.body = body;
-        }
-      } else {
-        this.body = body;
+          body = handler.getter.call(body, body);
+          defineReader(this, type, body);
+        } catch (e) {}
       }
+
+      defineReader(this, 'body', body);
     }
   };
 
-  function Request(type, url, options) {
-    this.method = type.toUpperCase();
+  function Request(method, url, options) {
+    var _this = this;
+
+    this.method = method.toUpperCase();
     this.path = url;
     this.data = {};
     this.form = null;
     this.options = Object.create(net.defaultOptions);
     this.headers = {};
+    this.urlParams = {};
+    this.urlData = {};
+
+    if (~url.indexOf('{')) {
+      url.replace(/{(\w+)}/g, function (p1, p2) {
+        _this.urlParams[p2] = p1;
+      });
+    }
   }
 
   Request.prototype = {
     set: function (key, value) {
-      if (key instanceof FormData) {
-        // TODO: File, Blob, ArrayBuffer
-        this.form = key;
-      } else if (value === void 0) {
+      if (value === void 0) {
         if (isObject(key)) {
-          Object.assign(this.data, key);
-        } else this.data[key] = true;
-      } else this.data[key] = value;
+          for (var k in key) {
+            if (k in this.urlParams) {
+              this.urlData[k] = key[k];
+            } else {
+              this.data[k] = key[k];
+            }
+          }
+        } else this.form = key;
+      } else {
+        if (isNativeType(value)) this.form = this.form || new FormData();
+
+        if (key in this.urlParams) {
+          this.urlData[key] = value;
+        } else this.data[key] = value;
+      }
 
       return this;
     },
@@ -233,6 +263,10 @@ define(function () {
       return this.setOption('type', val);
     },
 
+    expect: function (val) {
+      return this.setOption('responseType', val);
+    },
+
     send: function () {
       var xhr = new win.XMLHttpRequest(),
           self = this,
@@ -243,20 +277,31 @@ define(function () {
           headers = Object.create(self.headers),
           data = undefined;
 
+      for (var key in self.urlParams) {
+        url = url.replace(self.urlParams[key], self.urlData[key]);
+      }
+
+      // Content type '**/**'
+      if (~type.indexOf('/')) headers['Content-Type'] = type;
+
       if (Object.keys(self.data).length > 0 || self.form) {
         if (self.method === 'GET') {
+          // No body
           data = null;
           var query = net.serializeObject(self.data);
           if (query !== '') url += ~url.indexOf('?') ? '&' + query : '?' + query;
         } else if (self.form) {
           data = self.form;
-          for (var key in self.data) {
-            data.append(key, data);
+          if (data instanceof FormData) {
+            for (var key in self.data) {
+              data.append(key, data);
+            }
           }
         } else if (handler && handler.setter) {
           data = handler.setter.call(self.data, self.data);
-          if (!('Content-Type' in headers)) headers['Content-Type'] = handler.contentTypes[0];
         } else data = self.data;
+
+        if (handler && !('Content-Type' in headers)) headers['Content-Type'] = handler.contentTypes[0];
       }
 
       xhr.open(self.method, url, self.options.async);

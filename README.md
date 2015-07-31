@@ -16,8 +16,9 @@ May require polyfills for:
 ```js
 import net from 'net.js';
 
-let request = new net.Request('post', '/users')
+let request = new net.Request('post', '/users/{id}')
                  .setHeader('Auth-Token', 'xxx-secret')
+                 .set('id', 42)
                  .set('name', 'John Doe')
                  .set('email', 'john@example.org')
                  .type('json')
@@ -83,12 +84,6 @@ Where:
   - **type** registered request type or content-type string
   - **responseType** expected response type, can be registered type or `arraybuffer`, `blob` or `document`
 
-Options can also be specified by corresponding methods documented below or `setOption()` method:
-
-```js
-request.setOption('timeout', 1000);
-```
-
 Example:
 
 ```js
@@ -97,6 +92,21 @@ let request = new net.Request('POST', '/users/', {
   type: 'json',
   responseType: 'json'
 });
+```
+
+URL can contain simple template:
+
+```js
+let request = net.Request('get', '/news/{year}/{month}')
+request.set('year', 2015);
+request.set('month', 08);
+request.send(); // GET /news/2015/08
+```
+
+Options can also be specified by corresponding methods documented below or `setOption()` method:
+
+```js
+request.setOption('timeout', 1000);
 ```
 
 #### data
@@ -111,6 +121,14 @@ or an object with keys and values:
 
 ```js
 request.set({name: 'Joe', age: 26});
+```
+
+please, note that url variables **will not be included** in request body or query string:
+
+```js
+let request = new Request('get', '/users/{id}');
+request.set({ id: 2, filter: 'name' });
+request.send(); // GET /users/2?filter=name
 ```
 
 or just a plain string

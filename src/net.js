@@ -193,17 +193,32 @@ function Request(method, url, options) {
   this.form    = null;
   this.options = Object.create(net.defaultOptions);
   this.headers = {};
+  this.urlParams = {};
+  this.urlData = {};
+
+  if (~url.indexOf('{')) {
+    url.replace(/{(\w+)}/g, (p1, p2) => { this.urlParams[p2] = p1 });
+  }
 }
 
 Request.prototype = {
   set: function(key, value) {
     if (value === void 0) {
       if (isObject(key)) {
-        Object.assign(this.data, key);
+        for (let k in key) {
+          if (k in this.urlParams) {
+            this.urlData[k] = key[k];
+          } else {
+            this.data[k] = key[k];
+          }
+        }
       } else this.form = key;
     } else {
       if (isNativeType(value)) this.form = this.form || new FormData();
-      this.data[key] = value;
+
+      if (key in this.urlParams) {
+        this.urlData[key] = value;
+      } else this.data[key] = value;
     }
 
     return this;
@@ -247,6 +262,10 @@ Request.prototype = {
         handler = contentTypeHandlers[type],
         headers = Object.create(self.headers),
         data;
+
+    for (let key in self.urlParams) {
+      url = url.replace(self.urlParams[key], self.urlData[key]);
+    }
 
     // Content type '**/**'
     if (~type.indexOf('/')) headers['Content-Type'] = type;
