@@ -268,3 +268,12 @@ response.contentType; //=> 'application/json'
 // if registered:
 response.type; //=> 'json'
 ```
+
+## Development and build
+
+```
+npm install -g gulp
+npm install
+gulp test
+gulp build
+```

@@ -23,7 +23,7 @@
     "sinon-chai": "^2.8.0"
   },
   "scripts": {
-    "test": "gulp ci"
+    "test": "gulp test"
   },
   "author": "andrey@aejis.eu",
   "license": "MIT"

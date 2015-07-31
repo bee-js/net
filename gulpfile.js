@@ -48,6 +48,8 @@ gulp.task('build:amd', function(done) {
   gobble([amdMin, amd]).build({ dest: 'build/amd', force: true }).then(done);
 });
 
+gulp.task('build', ['build:amd', 'build:umd']);
+
 gulp.task('test', function(done) {
   gobble('test').transform('esperanto-bundle', {
     strict: false,
